@@ -1,0 +1,54 @@
+site_name: Firefly Catcher Framework
+site_description: Documentation for the Firefly Catcher Framework
+repo_url: https://github.com/zbytealchemy/ffc
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10.6.1/dist/mermaid.min.js
+
+nav:
+  - Home: index.md
+  - Architecture:
+    - Overview: architecture/overview.md
+  - Guides:
+    - Getting Started: guides/getting-started.md
+    - Installation: guides/installation.md
+    - LLM Integration: guides/llm-integration.md
+    - Agent Orchestration: guides/agent-orchestration.md
+  - Deployment:
+    - Docker Guide: deployment/docker.md
+  - API Reference:
+    - Runtime API: api/runtime.md
+    - Tools API: api/tools.md
+  - Examples:
+    - Basic Agent: examples/basic-agent.md
+    - Custom Tools: examples/custom-tools.md
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.inlinehilite
+  - admonition
+  - footnotes
+
+plugins:
+  - search

@@ -1,0 +1,78 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+
+      - name: Install poetry
+        working-directory: src/ffc
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          poetry config virtualenvs.create false
+
+      - name: Install dependencies
+        working-directory: src/ffc
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get install wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy -y
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/agent-runtime:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        run: |
+          trivy image --format table --exit-code 1 --ignore-unfixed --severity CRITICAL,HIGH ghcr.io/${{ github.repository_owner }}/agent-runtime:test
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Export requirements
+        working-directory: src/ffc
+        run: poetry export -f requirements.txt --output requirements.txt --without-hashes
+
+      - name: Run dependency security check
+        working-directory: src/ffc
+        run: pip-audit -r requirements.txt
+
+      - name: Run local security scan
+        run: |
+          chmod +x ci/security/scan.sh
+          ./ci/security/scan.sh
